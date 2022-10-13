@@ -2,18 +2,18 @@ package com.bkz.view
 
 import android.annotation.SuppressLint
 import android.content.Context
+import android.content.res.Resources
 import android.graphics.Canvas
+import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.RectF
 import android.provider.Settings
 import android.util.AttributeSet
+import android.util.TypedValue
 import android.view.MotionEvent
 import android.view.View
 import androidx.annotation.ColorInt
 import androidx.annotation.FloatRange
-import com.general.ext.color
-import com.general.ext.dp
-import com.hilldating.control.R
 import kotlin.math.abs
 
 val Context.screenBrightness get() = Settings.System.getInt(contentResolver, Settings.System.SCREEN_BRIGHTNESS, 125)
@@ -23,6 +23,13 @@ fun Context.setScreenBrightness(brightness: Int) {
         Settings.System.putInt(contentResolver, Settings.System.SCREEN_BRIGHTNESS, brightness)
     }
 }
+
+val Float.dp: Float
+    get() = TypedValue.applyDimension(
+        TypedValue.COMPLEX_UNIT_DIP,
+        this,
+        Resources.getSystem().displayMetrics
+    )
 
 class BrightnessSliderView @JvmOverloads constructor(
     context: Context,
@@ -35,13 +42,13 @@ class BrightnessSliderView @JvmOverloads constructor(
     private var progressRectF = RectF()
 
     @ColorInt
-    var backColor: Int = color(R.color.color_gray)
+    var backColor: Int = Color.GRAY
 
     @ColorInt
-    var progressColor: Int = color(R.color.white)
+    var progressColor: Int = Color.WHITE
 
     @ColorInt
-    var sunColor: Int = color(R.color.color_green)
+    var sunColor: Int = Color.GREEN
 
     @FloatRange(from = 0.0, to = Double.MAX_VALUE)
     var max: Float = 255f
