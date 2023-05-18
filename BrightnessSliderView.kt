@@ -42,25 +42,26 @@ class BrightnessSliderView @JvmOverloads constructor(
     private var progressRectF = RectF()
 
     @ColorInt
-    var backColor: Int = Color.GRAY
+    var backColor: Int = color(R.color.color_46)
 
     @ColorInt
-    var progressColor: Int = Color.WHITE
+    var progressColor: Int = color(R.color.white)
 
     @ColorInt
-    var sunColor: Int = Color.GREEN
+    var sunColor: Int = color(R.color.color_green)
 
-    @FloatRange(from = 0.0, to = Double.MAX_VALUE)
-    var max: Float = 255f
+    var max: Int = 255
+    private var progress: Int = 0
 
-    @FloatRange(from = 0.0, to = Double.MAX_VALUE)
-    var progress: Float = context.screenBrightness.toFloat()
+    var onProgressChange: ((Int) -> Unit)? = null
 
     private var sunRadius: Float = 0f
     private var sunMargin: Float = 0f
     private val shineWidth: Float = 2f.dp
     private val shineLength: Float = 4f.dp
     private val corners: Float = 10f
+    private var downY = 0f
+    private var moving: Boolean = false
 
     init {
         paint.isAntiAlias = true
@@ -85,7 +86,7 @@ class BrightnessSliderView @JvmOverloads constructor(
         paint.color = backColor
         c.drawRoundRect(viewRectF, corners, corners, paint)
         paint.color = progressColor
-        val progressHeight = progress / max * viewRectF.bottom
+        val progressHeight = progress.toFloat() / max * viewRectF.bottom
         progressRectF.set(0f, viewRectF.bottom - progressHeight, viewRectF.right, viewRectF.bottom)
         c.drawRoundRect(progressRectF, corners, corners, paint)
         paint.color = sunColor
@@ -100,42 +101,42 @@ class BrightnessSliderView @JvmOverloads constructor(
         c.restoreToCount(restoreToCount)
     }
 
-    private var downY = 0f
-    private var isMove = false
-
     @SuppressLint("ClickableViewAccessibility")
     override fun onTouchEvent(event: MotionEvent?): Boolean {
         parent?.requestDisallowInterceptTouchEvent(true)
         when (event?.action) {
             MotionEvent.ACTION_DOWN -> {
                 downY = event.y
-                isMove = false
+                moving = false
             }
             MotionEvent.ACTION_MOVE -> {
-                val diff = abs(downY - event.y)
-                if (diff > 10) {
-                    isMove = true
-                    val percentage = (downY - event.y) / viewRectF.bottom
-                    downY = event.y
-                    val offset = percentage * max
-                    val newProgress = progress + offset
-                    progress = if (newProgress > max) max else if (newProgress < 0) 0f else newProgress
-                    context?.setScreenBrightness(progress.toInt())
+                if (moving || abs((downY) - event.y) > ViewConfiguration.getTouchSlop()) {
+                    moving = true
+                    onProgressChange(event)
                 }
             }
             MotionEvent.ACTION_UP -> {
-                if (!isMove) {
-                    val diff = abs(downY - event.y)
-                    if (diff < 10) {
-                        val percentage = (viewRectF.bottom - event.y) / viewRectF.bottom
-                        val newProgress = percentage * max
-                        progress = if (newProgress > max) max else if (newProgress < 0) 0f else newProgress
-                        context?.setScreenBrightness(progress.toInt())
-                    }
+                if (moving || (abs(downY - event.y) < ViewConfiguration.getTouchSlop())) {
+                    onProgressChange(event)
                 }
             }
+            else -> {}
         }
-        invalidate()
         return true
+    }
+
+    private fun onProgressChange(event: MotionEvent) {
+        val newProgress = ((viewRectF.bottom - event.y) / viewRectF.bottom * max).toInt()
+        val progress = if (newProgress > max) max else if (newProgress < 0) 0 else newProgress
+        onProgressChange?.invoke(progress)
+    }
+
+    fun refreshProgress(_progress: Int) {
+        val progress = if (_progress > max) max else _progress
+        if (this.progress == progress) {
+            return
+        }
+        this.progress = progress
+        invalidate()
     }
 }
