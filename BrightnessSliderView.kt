@@ -42,26 +42,28 @@ class BrightnessSliderView @JvmOverloads constructor(
     private var progressRectF = RectF()
 
     @ColorInt
-    var backColor: Int = color(R.color.color_46)
+    var bgColor: Int = Color.GRAY
 
     @ColorInt
-    var progressColor: Int = color(R.color.white)
+    var progressColor: Int = Color.WHITE
 
     @ColorInt
-    var sunColor: Int = color(R.color.color_green)
+    var sunColor: Int = Color.BLACK
 
-    var max: Int = 255
+    private val max: Int = 254
     private var progress: Int = 0
+    private var brightness: Int = 0
 
     var onProgressChange: ((Int) -> Unit)? = null
 
     private var sunRadius: Float = 0f
     private var sunMargin: Float = 0f
     private val shineWidth: Float = 2f.dp
-    private val shineLength: Float = 4f.dp
-    private val corners: Float = 10f
+    private val shineLength: Float = 3f.dp
+    private val corners: Float = 16f.dp
     private var downY = 0f
     private var moving: Boolean = false
+    private val mode = PorterDuffXfermode(PorterDuff.Mode.SRC_ATOP)
 
     init {
         paint.isAntiAlias = true
@@ -76,29 +78,39 @@ class BrightnessSliderView @JvmOverloads constructor(
         val height = getDefaultSize(suggestedMinimumHeight, heightMeasureSpec)
         val width = getDefaultSize(suggestedMinimumWidth, widthMeasureSpec)
         viewRectF.set(0f, 0f, width.toFloat(), height.toFloat())
-        sunRadius = width / 6f
+        sunRadius = width / 10f
         sunMargin = width / 3f
     }
 
     override fun onDraw(c: Canvas) {
         super.onDraw(c)
-        val restoreToCount = c.save()
-        paint.color = backColor
+        //background
+        val sc = c.saveLayer(viewRectF, paint)
+        paint.color = bgColor
+        paint.xfermode = null
         c.drawRoundRect(viewRectF, corners, corners, paint)
+        //progress
+        var progressHeight = progress.toFloat() / max * viewRectF.bottom
+        if (progressHeight < 5) {
+            progressHeight = 0f
+        }
+        val top = viewRectF.bottom - progressHeight
+        progressRectF.set(0f, top, viewRectF.right, viewRectF.bottom)
         paint.color = progressColor
-        val progressHeight = progress.toFloat() / max * viewRectF.bottom
-        progressRectF.set(0f, viewRectF.bottom - progressHeight, viewRectF.right, viewRectF.bottom)
-        c.drawRoundRect(progressRectF, corners, corners, paint)
+        paint.xfermode = mode
+        c.drawRoundRect(progressRectF, if (top < corners) corners / 2 else corners, corners, paint)
+        //sun
         paint.color = sunColor
         val cx = viewRectF.right / 2
         val cy = viewRectF.bottom - sunRadius - sunMargin
+        paint.xfermode = null
         c.drawCircle(cx, cy, sunRadius, paint)
         c.translate(cx, cy)
         for (i in 0..10) {
             c.drawLine(sunRadius, sunRadius, sunRadius + shineLength, sunRadius + shineLength, paint)
             c.rotate(36f)
         }
-        c.restoreToCount(restoreToCount)
+        c.restoreToCount(sc)
     }
 
     @SuppressLint("ClickableViewAccessibility")
@@ -109,17 +121,20 @@ class BrightnessSliderView @JvmOverloads constructor(
                 downY = event.y
                 moving = false
             }
+
             MotionEvent.ACTION_MOVE -> {
-                if (moving || abs((downY) - event.y) > ViewConfiguration.getTouchSlop()) {
+                if (moving || abs((downY) - event.y) > ViewConfiguration.get(context).scaledTouchSlop) {
                     moving = true
                     onProgressChange(event)
                 }
             }
+
             MotionEvent.ACTION_UP -> {
-                if (moving || (abs(downY - event.y) < ViewConfiguration.getTouchSlop())) {
+                if (moving || (abs(downY - event.y) < ViewConfiguration.get(context).scaledTouchSlop)) {
                     onProgressChange(event)
                 }
             }
+
             else -> {}
         }
         return true
@@ -127,16 +142,18 @@ class BrightnessSliderView @JvmOverloads constructor(
 
     private fun onProgressChange(event: MotionEvent) {
         val newProgress = ((viewRectF.bottom - event.y) / viewRectF.bottom * max).toInt()
-        val progress = if (newProgress > max) max else if (newProgress < 0) 0 else newProgress
-        onProgressChange?.invoke(progress)
+        val progress = if (newProgress < 1) 1 else if (newProgress > max) max else newProgress
+        if (brightness != progress) {
+            brightness = progress
+            onProgressChange?.invoke(progress)
+        }
     }
 
-    fun refreshProgress(_progress: Int) {
-        val progress = if (_progress > max) max else _progress
-        if (this.progress == progress) {
-            return
+    fun setProgress(value: Int) {
+        val progress = if (value < 1) 1 else if (value > max) max else value
+        if (this.progress != progress) {
+            this.progress = progress
+            invalidate()
         }
-        this.progress = progress
-        invalidate()
     }
 }
