@@ -98,7 +98,7 @@ class BrightnessSliderView @JvmOverloads constructor(
         progressRectF.set(0f, top, viewRectF.right, viewRectF.bottom)
         paint.color = progressColor
         paint.xfermode = mode
-        c.drawRoundRect(progressRectF, if (top < corners) corners / 2 else corners, corners, paint)
+        c.drawRoundRect(progressRectF, corners, corners, paint)
         //sun
         paint.color = sunColor
         val cx = viewRectF.right / 2
